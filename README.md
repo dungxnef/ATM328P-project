@@ -7,6 +7,7 @@ In this repo , it will contain all my project from my classes that use Microchip
 - WEEK 1 _ LED Blinking
 - WEEK 2 _ LCD, 7 SEG Interact
 - WEEK 3 _ MATRIX KEYPAD
+- EX 2 _ SIMPLE 16BIT CALCULATOR USING MATRX KEYPAD AND 1602LCD
   
 # Youtube 
 

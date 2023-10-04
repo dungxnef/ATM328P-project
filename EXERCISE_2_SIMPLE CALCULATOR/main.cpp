@@ -6,7 +6,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <stdbool.h>
+
 
 // Define keypad and LCD connections
 #define KEY_PRT     PORTB

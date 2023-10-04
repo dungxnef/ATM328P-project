@@ -6,7 +6,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <avr/interrupt.h>
+#include <stdbool.h>
 
 // Define keypad and LCD connections
 #define KEY_PRT     PORTB
@@ -39,7 +39,7 @@ char keyfind(){
 	while (1)
 	{
 		KEY_DDR = 0xF0; /* set port direction as input-output */
-		KEY_PRT = 0xFF;
+		KEY_PRT = 0x0F;
 		do
 		{
 			KEY_PRT &= 0x0F; /* mask PORT for column read only */
@@ -108,7 +108,7 @@ char keyfind(){
 	}
 
 
-	void LCD_Command(unsigned char cmnd)
+void LCD_Command(unsigned char cmnd)
 	{
 		LCD_Data_Port = cmnd;
 		LCD_Command_Port &= ~(1 << RS);
@@ -119,7 +119,7 @@ char keyfind(){
 		_delay_ms(3);
 	}
 
-	void LCD_Char(unsigned char char_data)
+void LCD_Char(unsigned char char_data)
 	{
 		LCD_Data_Port = char_data;
 		LCD_Command_Port |= (1 << RS);
@@ -130,7 +130,7 @@ char keyfind(){
 		_delay_ms(1);
 	}
 
-	void LCD_Init(void)
+void LCD_Init(void)
 	{
 		LCD_Command_Dir = 0xFF;
 		LCD_Data_Dir = 0xFF;
@@ -143,7 +143,7 @@ char keyfind(){
 		LCD_Command(0x80);
 	}
 
-	void LCD_String(char *str)
+void LCD_String(char *str)
 	{
 		int i;
 		for (i = 0; str[i] != 0; i++)
@@ -152,7 +152,7 @@ char keyfind(){
 		}
 	}
 
-	void LCD_String_xy(char row, char pos, char *str)
+void LCD_String_xy(char row, char pos, char *str)
 	{
 		if (row == 0 && pos < 16)
 		LCD_Command((pos & 0x0F) | 0x80);
@@ -161,129 +161,97 @@ char keyfind(){
 		LCD_String(str);
 	}
 
-	void LCD_Clear()
+void LCD_Clear()
 	{
 		LCD_Command(0x01);
 		LCD_Command(0x80);
 	}
 
-	int eval_expression(const char *expression, int *result)
+
+int eval_expression(const char *expression, int *result)
+{
+	int num = 0;
+	int temp_result = 0;
+	char op = '+';
+	int sign = 1;
+	int stack[100], top = -1;
+
+	for (int i = 0; expression[i] != '\0'; i++)
+	{
+		char current_char = expression[i];
+		if (isdigit(current_char))
 		{
-			char op = '+';
-			int num = 0;
-			int temp_result = 0;
-
-			for (int i = 0; expression[i] != '\0'; i++)
-			{
-				char current_char = expression[i];
-				if (isdigit(current_char))
-				{
-					num = num * 10 + (current_char - '0');
-				}
-				else if (current_char == '+' || current_char == '-' || current_char == '*' || current_char == '/')
-				{
-					// Apply the previous operator to the accumulated number
-					switch (op)
-					{
-						case '+':
-						if (temp_result > INT_MAX - num)
-						{
-							// Handle overflow
-							return 0;
-						}
-						
-						temp_result += num;
-						break;
-						case '-':
-						if (temp_result < INT_MIN + num)
-						{
-							// Handle overflow
-							return 0;
-						}
-						temp_result -= num;
-						break;
-						case '*':
-						if (num != 0 && temp_result > INT_MAX / num)
-						{
-							// Handle overflow
-							return 0;
-						}
-						temp_result *= num;
-						break;
-						case '/':
-						if (num != 0)
-						{
-							temp_result /= num;
-						}
-						else
-						{
-							// Division by zero error
-							return 0;
-						}
-						break;
-						default:
-						// Invalid operator
-						return 0;
-					}
-
-					num = 0; // Reset the number
-					op = current_char; // Set the current operator
-				}
-				else
-				{
-					// Invalid character in the expression
-					return 0;
-				}
-			}
-
-			// Apply the last operator to the remaining number
+			num = num * 10 + (current_char - '0');
+			num *= sign;
+			sign = 1;
+		}
+		else
+		{
 			switch (op)
 			{
 				case '+':
-				if (temp_result > INT_MAX - num)
-				{
-					// Handle overflow
-					return 0;
-				}
-				temp_result += num;
+				stack[++top] = num;
 				break;
 				case '-':
-				if (temp_result < INT_MIN + num)
-				{
-					// Handle overflow
-					return 0;
-				}
-				temp_result -= num;
+				stack[++top] = -num;
 				break;
 				case '*':
-				if (num != 0 && temp_result > INT_MAX / num)
-				{
-					// Handle overflow
-					return 0;
-				}
-				temp_result *= num;
+				stack[top] *= num;
 				break;
 				case '/':
 				if (num != 0)
-				{
-					temp_result /= num;
-				}
+				stack[top] /= num;
 				else
-				{
-					// Division by zero error
-					return 0;
-				}
+				return 0; // Division by zero error
 				break;
 				default:
-				// Invalid operator
-				return 0;
+				return 0; // Invalid operator
 			}
 
-			*result = temp_result;
-			return 1; // Successful evaluation
-		}
+			num = 0; // Reset the number
+			op = current_char; // Set the current operator
 
-	
+			if (expression[i+1] == '-')
+			{
+				sign = -1;
+				i++;
+			}
+		}
+	}
+
+	// Apply the last operator to the remaining number
+	switch (op)
+	{
+		case '+':
+		stack[++top] = num;
+		break;
+		case '-':
+		stack[++top] = -num;
+		break;
+		case '*':
+		stack[top] *= num;
+		break;
+		case '/':
+		if (num != 0)
+		stack[top] /= num;
+		else
+		return 0; // Division by zero error
+		break;
+		default:
+		return 0; // Invalid operator
+	}
+
+	while (top != -1)
+	{
+		temp_result += stack[top--];
+	}
+
+	*result = temp_result;
+
+	return 1; // Successful evaluation
+}
+
+
 		int main(void) {
 
 		LCD_Init();

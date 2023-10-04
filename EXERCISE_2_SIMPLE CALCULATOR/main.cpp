@@ -196,7 +196,8 @@ int eval_expression(const char *expression, int *result)
 		if (isdigit(current_char))
 		{
 			int digit = (current_char - '0') * sign;
-			if ((sign == 1 && num > (INT_MAX - digit) / 10) || (sign == -1 && num < (INT_MIN - digit) / 10)) {
+			if ((sign == 1 && num > (INT_MAX - digit) / 10) 
+			   || (sign == -1 && num < (INT_MIN - digit) / 10)) {
 				return 0;
 			}
 			num = num * 10 + digit;
@@ -205,7 +206,9 @@ int eval_expression(const char *expression, int *result)
 		}
 		else
 		{
-			 if ((current_char == '*' || current_char == '/') && (prev_char == '*' || prev_char == '/') && !is_negative && !prev_is_digit)
+			 if ((current_char == '*' || current_char == '/') 
+			    && (prev_char == '*' || prev_char == '/') 
+		  	    && !is_negative && !prev_is_digit)
 			 {
 				 return 0; // Error: consecutive '*' or '/' operators
 			 }
@@ -230,10 +233,12 @@ int eval_expression(const char *expression, int *result)
 				stack[++top] = -num;
 				break;
 				case '*':
-				if ((stack[top] > 0 && num > INT_MAX / stack[top]) || (stack[top] < 0 && num < INT_MAX / stack[top])) {
+				if ((stack[top] > 0 && num > INT_MAX / stack[top]) 
+				   || (stack[top] < 0 && num < INT_MAX / stack[top])) {
 					Oflow_err_msg();
 				}
-				else if ((stack[top] > 0 && num < INT_MIN / stack[top]) || (stack[top] < 0 && num > INT_MIN / stack[top])) {
+				else if ((stack[top] > 0 && num < INT_MIN / stack[top]) 
+				        || (stack[top] < 0 && num > INT_MIN / stack[top])) {
 					Uflow_error_msg();
 				}
 				stack[top] *= num;
@@ -293,11 +298,13 @@ int eval_expression(const char *expression, int *result)
 		stack[++top] = -num;
 		break;
 		case '*':
-		if ((stack[top] > 0 && num > INT_MAX / stack[top]) || (stack[top] < 0 && num < INT_MAX / stack[top])) {
+		if ((stack[top] > 0 && num > INT_MAX / stack[top]) 
+		   || (stack[top] < 0 && num < INT_MAX / stack[top])) {
 			Oflow_err_msg();
 			return -1;
 		}
-		else if ((stack[top] > 0 && num < INT_MIN / stack[top]) || (stack[top] < 0 && num > INT_MIN / stack[top])) {
+		else if ((stack[top] > 0 && num < INT_MIN / stack[top]) 
+			|| (stack[top] < 0 && num > INT_MIN / stack[top])) {
 			Uflow_error_msg();
 			return -2;
 		}

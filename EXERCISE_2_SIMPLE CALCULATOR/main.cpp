@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 #include <ctype.h>
+#include <limits.h>
+
+
 
 
 // Define keypad and LCD connections
@@ -20,6 +22,7 @@
 #define RS PIND0
 #define RW PIND1
 #define EN PIND2
+
 
 // Keypad layout
 unsigned char keypad[4][4] = {
@@ -166,7 +169,19 @@ void LCD_Clear()
 		LCD_Command(0x01);
 		LCD_Command(0x80);
 	}
+	
+void Oflow_err_msg(){
+	LCD_Clear();
+	LCD_String("Overflow Error!");
+	input_buffer[0] = '\0'; // Reset the input buffer
+}
 
+void Uflow_error_msg(){
+	LCD_Clear();
+	LCD_String("Underflow Error!");
+	input_buffer[0] = '\0'; // Reset the input buffer
+}
+	
 
 int eval_expression(const char *expression, int *result)
 {
@@ -181,28 +196,50 @@ int eval_expression(const char *expression, int *result)
 		char current_char = expression[i];
 		if (isdigit(current_char))
 		{
-			num = num * 10 + (current_char - '0');
-			num *= sign;
-			sign = 1;
+			int digit = (current_char - '0') * sign;
+			if ((sign == 1 && num > (INT_MAX - digit) / 10) || (sign == -1 && num < (INT_MIN - digit) / 10)) {
+				return 0;
+			}
+			num = num * 10 + digit;
 		}
+
 		else
 		{
 			switch (op)
 			{
 				case '+':
+				if (num > 0 && stack[top] > INT_MAX - num) {
+					Oflow_err_msg();
+				}
+				else if (num < 0 && stack[top] < INT_MIN - num) {
+					Uflow_error_msg();
+				}
 				stack[++top] = num;
 				break;
 				case '-':
+				if (num < 0 && stack[top] > INT_MAX + num) {
+					 Oflow_err_msg();
+				}
+				else if (num > 0 && stack[top] < INT_MIN + num) {
+					Uflow_error_msg();
+				}
 				stack[++top] = -num;
 				break;
 				case '*':
+				if ((stack[top] > 0 && num > INT_MAX / stack[top]) || (stack[top] < 0 && num < INT_MAX / stack[top])) {
+					Oflow_err_msg();
+				}
+				else if ((stack[top] > 0 && num < INT_MIN / stack[top]) || (stack[top] < 0 && num > INT_MIN / stack[top])) {
+					Uflow_error_msg();
+				}
 				stack[top] *= num;
 				break;
 				case '/':
-				if (num != 0)
+				// Check for division by zero
+				if (num == 0) {
+					return 0; // Division by zero error
+				}
 				stack[top] /= num;
-				else
-				return 0; // Division by zero error
 				break;
 				default:
 				return 0; // Invalid operator
@@ -211,31 +248,55 @@ int eval_expression(const char *expression, int *result)
 			num = 0; // Reset the number
 			op = current_char; // Set the current operator
 
-			if (expression[i+1] == '-')
+			if (expression[i + 1] == '-')
 			{
 				sign = -1;
 				i++;
 			}
 		}
 	}
-
-	// Apply the last operator to the remaining number
+	
 	switch (op)
 	{
 		case '+':
+		if (num > 0 && stack[top] > INT_MAX - num) {
+			Oflow_err_msg();
+			return -1;
+		}
+		else if (num < 0 && stack[top] < INT_MIN - num) {
+			Uflow_error_msg();
+			return -2;
+		}
 		stack[++top] = num;
 		break;
 		case '-':
+		if (num < 0 && stack[top] > INT_MAX + num) {
+			Oflow_err_msg();
+			return -1;
+		}
+		else if (num > 0 && stack[top] < INT_MIN + num) {
+			Uflow_error_msg();
+			return -2;
+		}
 		stack[++top] = -num;
 		break;
 		case '*':
+		if ((stack[top] > 0 && num > INT_MAX / stack[top]) || (stack[top] < 0 && num < INT_MAX / stack[top])) {
+			Oflow_err_msg();
+			return -1;
+		}
+		else if ((stack[top] > 0 && num < INT_MIN / stack[top]) || (stack[top] < 0 && num > INT_MIN / stack[top])) {
+			Uflow_error_msg();
+			return -2;
+		}
 		stack[top] *= num;
 		break;
 		case '/':
-		if (num != 0)
+		// Check for division by zero
+		if (num == 0) {
+			return 0; // Division by zero error
+		}
 		stack[top] /= num;
-		else
-		return 0; // Division by zero error
 		break;
 		default:
 		return 0; // Invalid operator
@@ -246,21 +307,21 @@ int eval_expression(const char *expression, int *result)
 		temp_result += stack[top--];
 	}
 
-	*result = temp_result;
+		*result = temp_result;
 
 	return 1; // Successful evaluation
 }
 
 
-		int main(void) {
+int main(void) {
 
 		LCD_Init();
 		LCD_String(" 16 bit simple");
 		LCD_String_xy(1,3,"Calculator");
-			
 		while(1)
 		{
 			char key = keyfind();
+			
 			if (key != ' ')
 			{
 				if (isdigit(key))
@@ -279,8 +340,6 @@ int eval_expression(const char *expression, int *result)
 						// Handle buffer overflow error
 						LCD_Clear();
 						LCD_String("Buffer Overflow!");
-						_delay_ms(100);
-						LCD_Clear();
 					}
 				}
 				else if (key == '+' || key == '-' || key == '*' || key == '/')
@@ -299,8 +358,6 @@ int eval_expression(const char *expression, int *result)
 						// Handle buffer overflow error
 						LCD_Clear();
 						LCD_String("Buffer Overflow!");
-						_delay_ms(100);
-						LCD_Clear();
 					}
 				}
 				else if (key == '=')
@@ -308,23 +365,26 @@ int eval_expression(const char *expression, int *result)
 					// Check if the input buffer contains a valid expression
 					if (strlen(input_buffer) > 0)
 					{
-						// Attempt to calculate the result
-						if (eval_expression(input_buffer, &result))
+						switch(eval_expression(input_buffer,&result))
 						{
-							// Display the result
+							case -2:
+							Uflow_error_msg();
+							break;
+							case -1:
+							Oflow_err_msg();
+							break;
+							case 0:
+							LCD_Clear();
+							LCD_String("Invalid Input");
+							input_buffer[0] = '\0'; // Reset the input buffer
+							break;
+							default:
 							sprintf(result_str, "%d", result);
 							LCD_String_xy(1, 0, result_str);
 							input_buffer[0] = '\0'; // Reset the input buffer
+								
 						}
-						else
-						{
-							// Handle calculation error 
-							LCD_Clear();
-							LCD_String("Invalid Input");
-							_delay_ms(1000);
-							LCD_Clear();
-							input_buffer[0] = '\0'; // Reset the input buffer
-						}
+						
 					}
 				}
 				else if (key == 'C') // Clear the input buffer

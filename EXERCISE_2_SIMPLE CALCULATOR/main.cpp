@@ -178,6 +178,7 @@ void Uflow_error_msg(){
 	input_buffer[0] = '\0'; // Reset the input buffer
 }
 
+
 int eval_expression(const char *expression, int *result)
 {
 	int num = 0;
@@ -185,6 +186,9 @@ int eval_expression(const char *expression, int *result)
 	char op = '+';
 	int sign = 1;
 	int stack[100], top = -1;
+	char prev_char = '\0';
+	int is_negative = 0;
+	int prev_is_digit = 0;
 
 	for (int i = 0; expression[i] != '\0'; i++)
 	{
@@ -196,10 +200,15 @@ int eval_expression(const char *expression, int *result)
 				return 0;
 			}
 			num = num * 10 + digit;
+			is_negative =0;
+			prev_is_digit =1;
 		}
-
 		else
 		{
+			 if ((current_char == '*' || current_char == '/') && (prev_char == '*' || prev_char == '/') && !is_negative && !prev_is_digit)
+			 {
+				 return 0; // Error: consecutive '*' or '/' operators
+			 }
 			switch (op)
 			{
 				case '+':
@@ -247,10 +256,15 @@ int eval_expression(const char *expression, int *result)
 			{
 				sign = -1;
 				i++;
+				is_negative = 1;
+				prev_is_digit =0;
 			}
 			else{
 				sign =1;
+				is_negative = 0;
+				prev_is_digit = 0;
 			}
+			prev_char = current_char;
 		}
 	}
 
@@ -309,6 +323,7 @@ int eval_expression(const char *expression, int *result)
 
 	return 1; // Successful evaluation
 }
+
 
 int main(void) {
 

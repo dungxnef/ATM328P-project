@@ -37,29 +37,29 @@ unsigned char colloc, rowloc;
 char keyfind(){
 	while (1)
 	{
-		KEY_DDR = 0xF0; /* set port direction as input-output */
+		KEY_DDR = 0xF0; // set port direction as input-output 
 		KEY_PRT = 0x0F;
 		do
 		{
-			KEY_PRT &= 0x0F; /* mask PORT for column read only */
+			KEY_PRT &= 0x0F; //mask PORT for column read only 
 			asm("NOP");
-			colloc = (KEY_PIN & 0x0F); /* read status of column */
+			colloc = (KEY_PIN & 0x0F); // read status of column 
 		} while (colloc != 0x0F);
 
 		do
 		{
 			do
 			{
-				_delay_ms(20);             /* 20ms key debounce time */
-				colloc = (KEY_PIN & 0x0F); /* read status of column */
-				} while (colloc == 0x0F);        /* check for any key press */
+				_delay_ms(20);             // 20ms key debounce time 
+				colloc = (KEY_PIN & 0x0F); // read status of column 
+				} while (colloc == 0x0F);        // check for any key press
 
-				_delay_ms(20);              /* 20 ms key debounce time */
+				_delay_ms(20);              // 20 ms key debounce time 
 				colloc = (KEY_PIN & 0x0F);
 			} while (colloc == 0x0F);
 
 			/* now check for rows */
-			KEY_PRT = 0xEF;             /* check for pressed key in 1st row */
+			KEY_PRT = 0xEF;             // check for pressed key in 1st row 
 			asm("NOP");
 			colloc = (KEY_PIN & 0x0F);
 			if (colloc != 0x0F)
@@ -68,7 +68,7 @@ char keyfind(){
 				break;
 			}
 
-			KEY_PRT = 0xDF;             /* check for pressed key in 2nd row */
+			KEY_PRT = 0xDF;             // check for pressed key in 2nd row 
 			asm("NOP");
 			colloc = (KEY_PIN & 0x0F);
 			if (colloc != 0x0F)
@@ -77,7 +77,7 @@ char keyfind(){
 				break;
 			}
 
-			KEY_PRT = 0xBF;             /* check for pressed key in 3rd row */
+			KEY_PRT = 0xBF;             // check for pressed key in 3rd row 
 			asm("NOP");
 			colloc = (KEY_PIN & 0x0F);
 			if (colloc != 0x0F)
@@ -86,7 +86,7 @@ char keyfind(){
 				break;
 			}
 
-			KEY_PRT = 0x7F;             /* check for pressed key in 4th row */
+			KEY_PRT = 0x7F;             // check for pressed key in 4th row 
 			asm("NOP");
 			colloc = (KEY_PIN & 0x0F);
 			if (colloc != 0x0F)
@@ -185,10 +185,10 @@ int eval_expression(const char *expression, int *result)
 	int temp_result = 0;
 	char op = '+';
 	int sign = 1;
-	int stack[100], top = -1;
+	int stack[100], top = -1; // stack to support precedence
 	char prev_char = '\0';
-	int is_negative = 0;
-	int prev_is_digit = 0;
+	int is_negative = 0; 
+	int prev_is_digit = 0; 
 
 	for (int i = 0; expression[i] != '\0'; i++)
 	{
@@ -216,10 +216,10 @@ int eval_expression(const char *expression, int *result)
 			{
 				case '+':
 				if (num > 0 && stack[top] > INT_MAX - num) {
-					return -1;
+					return -1; // Error : Overflow > 2^15 -1 ( 32767) 16 bit int 
 				}
 				else if (num < 0 && stack[top] < INT_MIN - num) {
-					return -2;
+					return -2; // Error : Underflow < -2^15 (-32768) 16 bit int
 				}
 				stack[++top] = num;
 				break;
@@ -335,7 +335,7 @@ int main(void) {
 		{
 			if (isdigit(key))
 			{
-				// Append the pressed number to the input buffer
+				// Display the pressed number on the LCD
 				int input_length = strlen(input_buffer);
 				if (input_length < 16)
 				{
